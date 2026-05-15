@@ -1,0 +1,142 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Agent {
+  id                   String   @id @default(uuid()) @db.Uuid
+  handle               String   @unique
+  apiKeyHash           String   @unique @map("api_key_hash")
+  paidTier             Boolean  @default(false) @map("paid_tier")
+  lifetimeTopupCents   Int      @default(0) @map("lifetime_topup_cents")
+  cachedBalance        Int      @default(0) @map("cached_balance")
+  createdAt            DateTime @default(now()) @map("created_at")
+
+  bets        Bet[]
+  ledger      CreditLedger[]
+  topups      Topup[]
+  idempotency IdempotencyKey[]
+
+  @@map("agents")
+}
+
+enum PollStatus {
+  open
+  resolved_yes
+  resolved_no
+  voided
+}
+
+model Poll {
+  id              String     @id @default(uuid()) @db.Uuid
+  source          String
+  sourceId        String     @map("source_id")
+  question        String
+  status          PollStatus @default(open)
+  currentYesPrice Decimal    @map("current_yes_price") @db.Decimal(5, 4)
+  expiresAt       DateTime?  @map("expires_at")
+  resolvedAt      DateTime?  @map("resolved_at")
+  lastSyncedAt    DateTime   @default(now()) @map("last_synced_at")
+
+  bets Bet[]
+
+  @@unique([source, sourceId], name: "source_source_id_unique")
+  @@map("polls")
+}
+
+enum BetSide {
+  yes
+  no
+}
+
+enum SettlementStatus {
+  open
+  won
+  lost
+  refunded
+}
+
+model Bet {
+  id               String           @id @default(uuid()) @db.Uuid
+  agentId          String           @map("agent_id") @db.Uuid
+  pollId           String           @map("poll_id") @db.Uuid
+  side             BetSide
+  creditsStaked    Int              @map("credits_staked")
+  shares           Decimal          @db.Decimal(20, 8)
+  priceAtBet       Decimal          @map("price_at_bet") @db.Decimal(5, 4)
+  placedAt         DateTime         @default(now()) @map("placed_at")
+  settlementStatus SettlementStatus @default(open) @map("settlement_status")
+  settledCredits   Int?             @map("settled_credits")
+  settledAt        DateTime?        @map("settled_at")
+
+  agent  Agent          @relation(fields: [agentId], references: [id])
+  poll   Poll           @relation(fields: [pollId], references: [id])
+  ledger CreditLedger[]
+
+  @@index([agentId])
+  @@index([pollId, settlementStatus])
+  @@map("bets")
+}
+
+enum LedgerReason {
+  starter
+  bet_placed
+  bet_won
+  bet_refunded
+  topup
+  adjustment
+}
+
+model CreditLedger {
+  id             String       @id @default(uuid()) @db.Uuid
+  agentId        String       @map("agent_id") @db.Uuid
+  delta          Int
+  reason         LedgerReason
+  relatedBetId   String?      @map("related_bet_id") @db.Uuid
+  relatedTopupId String?      @map("related_topup_id") @db.Uuid
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  agent Agent  @relation(fields: [agentId], references: [id])
+  bet   Bet?   @relation(fields: [relatedBetId], references: [id])
+  topup Topup? @relation(fields: [relatedTopupId], references: [id])
+
+  @@index([agentId])
+  @@map("credit_ledger")
+}
+
+enum TopupStatus {
+  pending
+  succeeded
+  failed
+}
+
+model Topup {
+  id                String      @id @default(uuid()) @db.Uuid
+  agentId           String      @map("agent_id") @db.Uuid
+  stripeSessionId   String      @unique @map("stripe_session_id")
+  amountCents       Int         @map("amount_cents")
+  creditsDelivered  Int         @map("credits_delivered")
+  status            TopupStatus @default(pending)
+  createdAt         DateTime    @default(now()) @map("created_at")
+
+  agent  Agent          @relation(fields: [agentId], references: [id])
+  ledger CreditLedger[]
+
+  @@map("topups")
+}
+
+model IdempotencyKey {
+  key          String   @id
+  agentId      String?  @map("agent_id") @db.Uuid
+  requestHash  String   @map("request_hash")
+  responseBody Json     @map("response_body")
+  statusCode   Int      @map("status_code")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  agent Agent? @relation(fields: [agentId], references: [id])
+
+  @@map("idempotency_keys")
+}
