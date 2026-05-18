@@ -1,6 +1,7 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "crons": [
-    { "path": "/api/cron/sync-polymarket", "schedule": "*/1 * * * *" },
-    { "path": "/api/cron/settle", "schedule": "*/2 * * * *" }
+    { "path": "/api/cron/sync-polymarket", "schedule": "0 0 * * *" },
+    { "path": "/api/cron/settle",          "schedule": "0 1 * * *" }
   ]
 }
