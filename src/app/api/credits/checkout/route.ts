@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { getAuthedAgent } from "@/lib/auth";
 import { getStripe, TOPUP_TIERS } from "@/lib/stripe";
 import { errorResponse } from "@/lib/error";
+import { rateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -14,6 +15,10 @@ const Body = z.object({
 export async function POST(req: NextRequest) {
   const auth = await getAuthedAgent(req);
   if (!auth) return errorResponse("unauthorized");
+
+  if (!rateLimit(`checkout:${auth.id}`, { limit: 10, windowMs: 60_000 })) {
+    return errorResponse("rate_limited");
+  }
 
   let parsed: z.infer<typeof Body>;
   try {

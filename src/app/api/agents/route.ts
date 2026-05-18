@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { generateApiKey } from "@/lib/crypto";
 import { applyLedgerEntry } from "@/lib/balance";
 import { errorResponse } from "@/lib/error";
+import { rateLimit, ipFromRequest } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -24,6 +25,14 @@ function autoHandle(): string {
 }
 
 export async function POST(req: NextRequest) {
+  const ip = ipFromRequest(req);
+  if (!rateLimit(`agents:${ip}`, { limit: 10, windowMs: 60 * 60 * 1000 })) {
+    return errorResponse("rate_limited");
+  }
+  if (!rateLimit(`agents-day:${ip}`, { limit: 100, windowMs: 24 * 60 * 60 * 1000 })) {
+    return errorResponse("rate_limited");
+  }
+
   let parsed: z.infer<typeof Body>;
   try {
     parsed = Body.parse(await req.json());

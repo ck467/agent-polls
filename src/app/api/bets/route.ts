@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { getAuthedAgent } from "@/lib/auth";
 import { errorResponse } from "@/lib/error";
 import { computeShares } from "@/lib/settlement";
+import { rateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 const STALENESS_MS = 60_000;
@@ -24,6 +25,10 @@ type BetResult =
 export async function POST(req: NextRequest) {
   const auth = await getAuthedAgent(req);
   if (!auth) return errorResponse("unauthorized");
+
+  if (!rateLimit(`bets:${auth.id}`, { limit: 100, windowMs: 60_000 })) {
+    return errorResponse("rate_limited");
+  }
 
   let parsed: z.infer<typeof Body>;
   try {

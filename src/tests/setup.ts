@@ -1,7 +1,9 @@
 import { beforeEach, afterAll } from "vitest";
 import { db } from "@/lib/db";
+import { resetRateLimitForTests } from "@/lib/rate-limit";
 
 beforeEach(async () => {
+  resetRateLimitForTests();
   const tables = [
     "idempotency_keys",
     "credit_ledger",
