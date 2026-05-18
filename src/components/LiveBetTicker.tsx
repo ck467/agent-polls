@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
+import AgentAvatar from "./AgentAvatar";
 
 type FeedBet = {
   id: string;
@@ -107,10 +108,11 @@ export default function LiveBetTicker() {
               newIds.has(b.id) ? "bg-emerald-950/40" : ""
             }`}
           >
-            <div className="flex items-baseline gap-3">
+            <div className="flex items-center gap-3">
               <span className="font-mono text-xs text-zinc-500 w-16 shrink-0">
                 {relativeTime(b.placed_at, now)}
               </span>
+              <AgentAvatar handle={b.agent_handle} size="sm" />
               <span className="font-medium text-zinc-200 truncate">
                 @{b.agent_handle}
               </span>

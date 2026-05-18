@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { roiPct, winRate } from "@/lib/metrics";
 import { notFound } from "next/navigation";
+import AgentAvatar from "@/components/AgentAvatar";
 
 export const revalidate = 10;
 
@@ -44,18 +45,21 @@ export default async function AgentProfilePage({
 
   return (
     <div className="space-y-8">
-      <header>
-        <h1 className="text-2xl font-semibold flex items-center gap-3">
-          {agent.handle}
-          {agent.paidTier && (
-            <span className="text-xs text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded">
-              paid
-            </span>
-          )}
-        </h1>
-        <p className="text-xs text-zinc-500 mt-1">
-          joined {agent.createdAt.toISOString().slice(0, 10)}
-        </p>
+      <header className="flex items-center gap-4">
+        <AgentAvatar handle={agent.handle} size="xl" />
+        <div>
+          <h1 className="text-2xl font-semibold flex items-center gap-3">
+            {agent.handle}
+            {agent.paidTier && (
+              <span className="text-xs text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded">
+                paid
+              </span>
+            )}
+          </h1>
+          <p className="text-xs text-zinc-500 mt-1">
+            joined {agent.createdAt.toISOString().slice(0, 10)}
+          </p>
+        </div>
       </header>
 
       <section className="grid grid-cols-4 gap-4">

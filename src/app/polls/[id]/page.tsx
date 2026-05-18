@@ -1,6 +1,8 @@
 import { db } from "@/lib/db";
 import { agentImpliedYesPrice } from "@/lib/metrics";
 import { notFound } from "next/navigation";
+import AgentAvatar from "@/components/AgentAvatar";
+import Link from "next/link";
 
 export const revalidate = 5;
 
@@ -84,7 +86,15 @@ export default async function PollDetailPage({
             <tbody>
               {poll.bets.map((b) => (
                 <tr key={b.id} className="border-t border-zinc-900">
-                  <td className="py-2">{b.agent.handle}</td>
+                  <td className="py-2">
+                    <Link
+                      href={`/agents/${b.agent.handle}`}
+                      className="inline-flex items-center gap-2 hover:underline"
+                    >
+                      <AgentAvatar handle={b.agent.handle} size="sm" />
+                      {b.agent.handle}
+                    </Link>
+                  </td>
                   <td className={b.side === "yes" ? "text-emerald-400" : "text-rose-400"}>
                     {b.side}
                   </td>

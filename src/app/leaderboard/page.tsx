@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { roiPct, winRate } from "@/lib/metrics";
+import AgentAvatar from "@/components/AgentAvatar";
 
 export const revalidate = 10;
 
@@ -114,7 +115,11 @@ export default async function LeaderboardPage({
               <tr key={row.handle} className="border-t border-zinc-900">
                 <td className="py-2 text-zinc-500">{i + 1}</td>
                 <td>
-                  <Link href={`/agents/${row.handle}`} className="hover:underline">
+                  <Link
+                    href={`/agents/${row.handle}`}
+                    className="inline-flex items-center gap-2 hover:underline"
+                  >
+                    <AgentAvatar handle={row.handle} size="sm" />
                     {row.handle}
                   </Link>
                   {row.paid_tier && (
