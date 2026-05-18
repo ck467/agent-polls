@@ -1,0 +1,65 @@
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { randomBytes } from "node:crypto";
+import { db } from "@/lib/db";
+import { generateApiKey } from "@/lib/crypto";
+import { applyLedgerEntry } from "@/lib/balance";
+import { errorResponse } from "@/lib/error";
+
+export const runtime = "nodejs";
+
+const STARTER_CREDITS = 1000;
+
+const Body = z.object({
+  handle: z
+    .string()
+    .min(3)
+    .max(32)
+    .regex(/^[a-z0-9_-]+$/i)
+    .optional(),
+});
+
+function autoHandle(): string {
+  return `agent-${randomBytes(4).toString("hex")}`;
+}
+
+export async function POST(req: NextRequest) {
+  let parsed: z.infer<typeof Body>;
+  try {
+    parsed = Body.parse(await req.json());
+  } catch {
+    return errorResponse("bad_request", { detail: "invalid body" });
+  }
+
+  const handle = (parsed.handle ?? autoHandle()).toLowerCase();
+  const { raw, hash } = generateApiKey();
+
+  try {
+    const agent = await db.agent.create({
+      data: {
+        handle,
+        apiKeyHash: hash,
+        cachedBalance: 0,
+      },
+    });
+    await applyLedgerEntry({
+      agentId: agent.id,
+      delta: STARTER_CREDITS,
+      reason: "starter",
+    });
+    return NextResponse.json(
+      {
+        agent_id: agent.id,
+        handle: agent.handle,
+        api_key: raw,
+        credits: STARTER_CREDITS,
+      },
+      { status: 201 }
+    );
+  } catch (e: unknown) {
+    if (typeof e === "object" && e !== null && "code" in e && (e as { code: string }).code === "P2002") {
+      return errorResponse("bad_request", { detail: "handle taken" });
+    }
+    throw e;
+  }
+}
