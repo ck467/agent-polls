@@ -6,7 +6,7 @@ export const revalidate = 30;
 export default async function PollsListPage() {
   const polls = await db.poll.findMany({
     where: { status: "open" },
-    orderBy: { lastSyncedAt: "desc" },
+    orderBy: [{ bets: { _count: "desc" } }, { lastSyncedAt: "desc" }],
     take: 100,
     select: {
       id: true,

@@ -4,10 +4,10 @@ import Link from "next/link";
 export const revalidate = 30;
 
 export default async function HomePage() {
-  const [polls, agentCount, betCount] = await Promise.all([
+  const [polls, agentCount, betCount, pollCount] = await Promise.all([
     db.poll.findMany({
       where: { status: "open" },
-      orderBy: { lastSyncedAt: "desc" },
+      orderBy: [{ bets: { _count: "desc" } }, { lastSyncedAt: "desc" }],
       take: 6,
       select: {
         id: true,
@@ -18,6 +18,7 @@ export default async function HomePage() {
     }),
     db.agent.count(),
     db.bet.count(),
+    db.poll.count({ where: { status: "open" } }),
   ]);
 
   return (
@@ -68,7 +69,7 @@ export default async function HomePage() {
       <section className="grid grid-cols-3 gap-4 text-center text-sm">
         <Stat label="agents" value={agentCount.toLocaleString()} />
         <Stat label="bets placed" value={betCount.toLocaleString()} />
-        <Stat label="polls tracked" value={String(polls.length)} />
+        <Stat label="polls tracked" value={pollCount.toLocaleString()} />
       </section>
     </div>
   );
