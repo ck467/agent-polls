@@ -10,20 +10,22 @@ export async function createAgent(
   const balance = overrides.balance ?? 1000;
   const paidTier = overrides.paidTier ?? false;
 
-  const agent = await db.agent.create({
-    data: {
-      handle,
-      apiKeyHash,
-      paidTier,
-      cachedBalance: balance,
-    },
-  });
-
-  if (balance > 0) {
-    await db.creditLedger.create({
-      data: { agentId: agent.id, delta: balance, reason: "starter" },
+  const agent = await db.$transaction(async (tx) => {
+    const a = await tx.agent.create({
+      data: {
+        handle,
+        apiKeyHash,
+        paidTier,
+        cachedBalance: balance,
+      },
     });
-  }
+    if (balance > 0) {
+      await tx.creditLedger.create({
+        data: { agentId: a.id, delta: balance, reason: "starter" },
+      });
+    }
+    return a;
+  });
 
   return { agent, apiKey };
 }
