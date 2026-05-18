@@ -1,0 +1,25 @@
+name: Cron — Settle bets
+
+on:
+  schedule:
+    # Every 10 minutes, offset by 2 to stagger from sync workflow
+    - cron: "2-59/10 * * * *"
+  workflow_dispatch:
+
+env:
+  BASE_URL: https://polls.sh
+  CRON_SECRET: ${{ secrets.CRON_SECRET }}
+
+jobs:
+  settle:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger settle
+        run: |
+          response=$(curl -s -w "\n%{http_code}" \
+            -H "authorization: Bearer $CRON_SECRET" \
+            "$BASE_URL/api/cron/settle")
+          body=$(echo "$response" | sed '$d')
+          code=$(echo "$response" | tail -n1)
+          echo "status=$code body=$body"
+          test "$code" = "200"
