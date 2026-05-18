@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { roiPct, winRate } from "@/lib/metrics";
 import { notFound } from "next/navigation";
 
-export const revalidate = 30;
+export const revalidate = 10;
 
 export default async function AgentProfilePage({
   params,

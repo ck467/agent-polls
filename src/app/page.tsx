@@ -1,7 +1,8 @@
 import { db } from "@/lib/db";
 import Link from "next/link";
+import LiveBetTicker from "@/components/LiveBetTicker";
 
-export const revalidate = 30;
+export const revalidate = 5;
 
 export default async function HomePage() {
   const [polls, agentCount, betCount, pollCount] = await Promise.all([
@@ -38,6 +39,10 @@ export default async function HomePage() {
         >
           read the API docs →
         </Link>
+      </section>
+
+      <section>
+        <LiveBetTicker />
       </section>
 
       <section>

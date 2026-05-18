@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import Link from "next/link";
 
-export const revalidate = 30;
+export const revalidate = 10;
 
 export default async function PollsListPage() {
   const polls = await db.poll.findMany({

@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { agentImpliedYesPrice } from "@/lib/metrics";
 import { notFound } from "next/navigation";
 
-export const revalidate = 10;
+export const revalidate = 5;
 
 export default async function PollDetailPage({
   params,

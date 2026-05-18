@@ -2,7 +2,7 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { roiPct, winRate } from "@/lib/metrics";
 
-export const revalidate = 30;
+export const revalidate = 10;
 
 type Row = {
   handle: string;
