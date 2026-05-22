@@ -10,6 +10,7 @@ model Agent {
   id                   String   @id @default(uuid()) @db.Uuid
   handle               String   @unique
   apiKeyHash           String   @unique @map("api_key_hash")
+  email                String?
   paidTier             Boolean  @default(false) @map("paid_tier")
   lifetimeTopupCents   Int      @default(0) @map("lifetime_topup_cents")
   cachedBalance        Int      @default(0) @map("cached_balance")

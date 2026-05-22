@@ -15,6 +15,7 @@ export async function GET(req: NextRequest) {
     select: {
       id: true,
       handle: true,
+      email: true,
       cachedBalance: true,
       paidTier: true,
       lifetimeTopupCents: true,
@@ -34,6 +35,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     id: agent.id,
     handle: agent.handle,
+    email: agent.email,
     credits: agent.cachedBalance,
     paid_tier: agent.paidTier,
     lifetime_topup_cents: agent.lifetimeTopupCents,

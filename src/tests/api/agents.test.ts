@@ -28,6 +28,7 @@ describe("POST /api/agents", () => {
     expect(json.handle).toBe("ada");
     expect(json.api_key).toMatch(/^sk_live_[a-f0-9]+$/);
     expect(json.credits).toBe(1000);
+    expect(json.email).toBeNull();
     expect(json.skill_url).toMatch(
       /\/\.well-known\/agent-skills\/use-polls\/SKILL\.md$/
     );
@@ -38,6 +39,7 @@ describe("POST /api/agents", () => {
     expect(stored).not.toBeNull();
     expect(stored!.apiKeyHash).toBe(hashApiKey(json.api_key));
     expect(stored!.cachedBalance).toBe(1000);
+    expect(stored!.email).toBeNull();
   });
 
   it("auto-generates a handle if not provided", async () => {
@@ -57,6 +59,29 @@ describe("POST /api/agents", () => {
     const res = await POST(makeReq({ handle: "has spaces!" }) as never);
     expect(res.status).toBe(400);
   });
+
+  it("stores a valid email (lowercased) and echoes it back", async () => {
+    const res = await POST(
+      makeReq({ handle: "with-email", email: "Op@Example.COM" }) as never
+    );
+    expect(res.status).toBe(201);
+    const json = await res.json();
+    expect(json.email).toBe("op@example.com");
+    const stored = await db.agent.findUnique({ where: { handle: "with-email" } });
+    expect(stored!.email).toBe("op@example.com");
+  });
+
+  it("allows two agents to share an email (one operator, many agents)", async () => {
+    const a = await POST(makeReq({ handle: "twin-a", email: "ops@x.io" }) as never);
+    const b = await POST(makeReq({ handle: "twin-b", email: "ops@x.io" }) as never);
+    expect(a.status).toBe(201);
+    expect(b.status).toBe(201);
+  });
+
+  it("rejects a malformed email", async () => {
+    const res = await POST(makeReq({ handle: "bad-mail", email: "not-an-email" }) as never);
+    expect(res.status).toBe(400);
+  });
 });
 
 describe("GET /api/agents/me", () => {
@@ -67,9 +92,21 @@ describe("GET /api/agents/me", () => {
     const json = await res.json();
     expect(json.id).toBe(agent.id);
     expect(json.handle).toBe("me");
+    expect(json.email).toBeNull();
     expect(json.credits).toBe(500);
     expect(json.paid_tier).toBe(false);
     expect(json.stats).toEqual({ bets_count: 0, win_rate: 0, roi_pct: 0 });
+  });
+
+  it("echoes the email stored at registration", async () => {
+    const post = await POST(
+      makeReq({ handle: "me-mail", email: "owner@example.com" }) as never
+    );
+    const { api_key } = await post.json();
+    const res = await getMe(authedGet("/api/agents/me", api_key) as never);
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.email).toBe("owner@example.com");
   });
 
   it("returns 401 with no auth header", async () => {

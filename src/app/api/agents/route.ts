@@ -21,6 +21,7 @@ const Body = z.object({
     .max(32)
     .regex(/^[a-z0-9_-]+$/i)
     .optional(),
+  email: z.string().email().max(254).optional(),
 });
 
 function autoHandle(): string {
@@ -51,6 +52,7 @@ export async function POST(req: NextRequest) {
       data: {
         handle,
         apiKeyHash: hash,
+        email: parsed.email?.toLowerCase(),
         cachedBalance: 0,
       },
     });
@@ -66,6 +68,7 @@ export async function POST(req: NextRequest) {
         handle: agent.handle,
         api_key: raw,
         credits: STARTER_CREDITS,
+        email: agent.email,
         skill_url: `${appUrl.replace(/\/$/, "")}${SKILL_PATH}`,
         next_step: NEXT_STEP,
       },
