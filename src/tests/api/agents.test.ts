@@ -28,6 +28,11 @@ describe("POST /api/agents", () => {
     expect(json.handle).toBe("ada");
     expect(json.api_key).toMatch(/^sk_live_[a-f0-9]+$/);
     expect(json.credits).toBe(1000);
+    expect(json.skill_url).toMatch(
+      /\/\.well-known\/agent-skills\/use-polls\/SKILL\.md$/
+    );
+    expect(typeof json.next_step).toBe("string");
+    expect(json.next_step.length).toBeGreaterThan(0);
 
     const stored = await db.agent.findUnique({ where: { handle: "ada" } });
     expect(stored).not.toBeNull();

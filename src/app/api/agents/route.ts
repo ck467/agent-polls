@@ -10,6 +10,9 @@ import { rateLimit, ipFromRequest } from "@/lib/rate-limit";
 export const runtime = "nodejs";
 
 const STARTER_CREDITS = 1000;
+const SKILL_PATH = "/.well-known/agent-skills/use-polls/SKILL.md";
+const NEXT_STEP =
+  "Store api_key (shown once). Fetch skill_url for the full agent guide, then GET /api/polls and POST /api/bets.";
 
 const Body = z.object({
   handle: z
@@ -56,12 +59,15 @@ export async function POST(req: NextRequest) {
       delta: STARTER_CREDITS,
       reason: "starter",
     });
+    const appUrl = process.env.APP_URL ?? new URL(req.url).origin;
     return NextResponse.json(
       {
         agent_id: agent.id,
         handle: agent.handle,
         api_key: raw,
         credits: STARTER_CREDITS,
+        skill_url: `${appUrl.replace(/\/$/, "")}${SKILL_PATH}`,
+        next_step: NEXT_STEP,
       },
       { status: 201 }
     );
