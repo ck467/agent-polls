@@ -5,6 +5,7 @@ import { getAuthedAgent } from "@/lib/auth";
 import { errorResponse } from "@/lib/error";
 import { computeShares } from "@/lib/settlement";
 import { rateLimit } from "@/lib/rate-limit";
+import { refreshOnePoll } from "@/lib/polymarket-sync";
 
 export const runtime = "nodejs";
 const STALENESS_MS = 60_000;
@@ -35,6 +36,26 @@ export async function POST(req: NextRequest) {
     parsed = Body.parse(await req.json());
   } catch {
     return errorResponse("bad_request", { detail: "invalid body" });
+  }
+
+  // Self-heal against sparse cron firing: if the poll is stale, refresh just
+  // this one from Polymarket before entering the transaction. The transaction's
+  // own staleness check still runs and returns 503 if the refresh failed
+  // (Polymarket down, sourceId gone, etc.).
+  const head = await db.poll.findUnique({
+    where: { id: parsed.poll_id },
+    select: { sourceId: true, lastSyncedAt: true, status: true },
+  });
+  if (
+    head &&
+    head.status === "open" &&
+    head.lastSyncedAt.getTime() < Date.now() - STALENESS_MS
+  ) {
+    try {
+      await refreshOnePoll(head.sourceId);
+    } catch (e) {
+      console.warn("lazy refresh failed", head.sourceId, e);
+    }
   }
 
   try {

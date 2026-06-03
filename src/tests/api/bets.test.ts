@@ -1,7 +1,13 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import { POST, GET } from "@/app/api/bets/route";
 import { db } from "@/lib/db";
 import { createAgent, createPoll } from "../fixtures";
+import { FakePolymarket } from "@/lib/polymarket.fake";
+import { setPolymarketAdapter } from "@/lib/polymarket";
+
+beforeEach(() => {
+  setPolymarketAdapter(new FakePolymarket());
+});
 
 function authedPost(body: unknown, apiKey: string): Request {
   return new Request("http://localhost/api/bets", {
@@ -42,13 +48,42 @@ describe("POST /api/bets", () => {
     expect(res.status).toBe(409);
   });
 
-  it("returns 503 when price is stale", async () => {
+  it("returns 503 when price is stale and Polymarket has no fresh data", async () => {
+    // fake adapter has no entry for this sourceId, so the lazy refresh is a no-op
     const { apiKey } = await createAgent({ balance: 1000 });
     const poll = await createPoll({
       lastSyncedAt: new Date(Date.now() - 120_000),
     });
     const res = await POST(authedPost({ poll_id: poll.id, side: "yes", credits: 100 }, apiKey) as never);
     expect(res.status).toBe(503);
+  });
+
+  it("self-heals a stale poll via lazy refresh and places the bet", async () => {
+    const { apiKey } = await createAgent({ balance: 1000 });
+    const poll = await createPoll({
+      sourceId: "pm-stale-1",
+      price: 0.5,
+      lastSyncedAt: new Date(Date.now() - 5 * 60_000),
+    });
+
+    const fake = new FakePolymarket();
+    fake.set({
+      sourceId: "pm-stale-1",
+      question: "refreshed",
+      status: "open",
+      yesPrice: 0.7,
+      expiresAt: null,
+    });
+    setPolymarketAdapter(fake);
+
+    const res = await POST(authedPost({ poll_id: poll.id, side: "yes", credits: 100 }, apiKey) as never);
+    expect(res.status).toBe(201);
+    const json = await res.json();
+    expect(json.price_at_bet).toBeCloseTo(0.7, 4);
+
+    const after = await db.poll.findUnique({ where: { id: poll.id } });
+    expect(after!.lastSyncedAt.getTime()).toBeGreaterThan(Date.now() - 10_000);
+    expect(Number(after!.currentYesPrice)).toBeCloseTo(0.7, 4);
   });
 
   it("returns 401 with no auth", async () => {
